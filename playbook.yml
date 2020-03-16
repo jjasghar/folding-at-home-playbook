@@ -1,0 +1,44 @@
+---
+- hosts: all
+  become: true
+  tasks:
+    - name: ensure everything is up to date
+      yum: name=* state=latest
+
+    - name: ensure chrony is installed and up to date
+      yum: pkg=chrony state=latest
+      notify:
+        - restart chrony
+
+    - name: ensure python *sigh* 2 is installed and up to date
+      yum: name=python2 state=latest
+
+    - name: Create a python version symbolic link
+      file:
+        src: /usr/lib/python2.7
+        dest: /usr/lib/python2.6
+        state: link
+
+    - name: pull down and install folding at home client
+      yum: name=https://download.foldingathome.org/releases/public/release/fahclient/centos-6.7-64bit/v7.5/fahclient-7.5.1-1.x86_64.rpm
+
+    - name: pull down and install folding at home control
+      command: >
+        rpm -i --nodeps https://download.foldingathome.org/releases/public/release/fahcontrol/centos-6.7-64bit/v7.5/fahcontrol-7.5.1-1.noarch.rpm
+      args:
+        creates: /bin/FAHControl
+
+    - name: pull down and install folding at home viewer
+      yum: name=https://download.foldingathome.org/releases/public/release/fahviewer/centos-6.7-64bit/v7.5/fahviewer-7.5.1-1.x86_64.rpm
+
+    - name: template a file to /etc/fahclient/config.xml
+      template:
+        src: templates/config.xml.j2
+        dest: /etc/fahclient/config.xml
+
+  handlers:
+    - name: restart chrony
+      service: name=chrony state=restarted
+
+    - name: restart FAHClient client
+      service: name=FAHClient state=restarted
